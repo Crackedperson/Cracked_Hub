@@ -1,0 +1,474 @@
+-- ⚙️ Whitelist Config
+local fileName = "whitelist.txt"
+local whitelist = {}
+
+if isfile and isfile(fileName) then
+    local data = readfile(fileName)
+    for name in string.gmatch(data, "[^\r\n]+") do
+        whitelist[name] = true
+    end
+else
+    whitelist = {
+        ["hackeqwrtrt"] = true,
+        ["Abhiraj_1403"] = true
+    }
+end
+
+local function saveWhitelist()
+    if writefile then
+        local lines = {}
+        for name in pairs(whitelist) do
+            table.insert(lines, name)
+        end
+        writefile(fileName, table.concat(lines, "\n"))
+    end
+end
+
+-- ✅ Services
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local LocalPlayer = Players.LocalPlayer
+local Debris = game:GetService("Debris")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
+
+-- ✅ Freeze Effect (for Time Stop)
+local function freezeEffect(char, freeze)
+    if freeze then
+        local effect = Instance.new("Highlight", char)
+        effect.FillColor = Color3.fromRGB(255, 0, 0)
+        effect.OutlineTransparency = 1
+        Debris:AddItem(effect, 0.5)
+    end
+end
+
+-- Auto-freeze new players on join
+local frozen = false
+
+Players.PlayerAdded:Connect(function(player)
+    if frozen and not whitelist[player.Name] then
+        player.CharacterAdded:Connect(function(char)
+            wait(0.1)
+            freezeEffect(char, true)
+            for _, part in pairs(char:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.Anchored = true
+                end
+            end
+            local hum = char:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.WalkSpeed = 0
+                hum.JumpPower = 0
+            end
+        end)
+    end
+end)
+
+-- ✅ GUI
+local gui = Instance.new("ScreenGui", game.CoreGui)
+gui.Name = "CrackedHubUI"
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.new(0, 300, 0, 390)
+frame.Position = UDim2.new(0.3, 0, 0.3, 0)
+frame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+frame.BorderSizePixel = 2
+frame.Active = true
+
+-- Minimize Button
+local minimizeBtn = Instance.new("TextButton", gui)
+minimizeBtn.Text = "Minimize"
+minimizeBtn.Size = UDim2.new(0, 100, 0, 30)
+minimizeBtn.Position = UDim2.new(0.3, 0, 0.3, -35)
+minimizeBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+minimizeBtn.TextColor3 = Color3.new(1,1,1)
+minimizeBtn.Font = Enum.Font.SourceSansBold
+minimizeBtn.TextSize = 16
+
+local uiMinimized = false
+minimizeBtn.MouseButton1Click:Connect(function()
+    uiMinimized = not uiMinimized
+    frame.Visible = not uiMinimized
+    minimizeBtn.Text = uiMinimized and "Restore" or "Minimize"
+end)
+
+-- Mobile & PC Drag Support
+local dragging, dragInput, dragStart, startPos
+
+frame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = frame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+frame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- UI Elements
+local title = Instance.new("TextLabel", frame)
+title.Text = "Cracked_Hub"
+title.Size = UDim2.new(1, -50, 0, 40)
+title.Position = UDim2.new(0, 10, 0, 0)
+title.BackgroundTransparency = 1
+title.TextColor3 = Color3.new(1, 1, 1)
+title.Font = Enum.Font.SourceSansBold
+title.TextSize = 20
+title.TextXAlignment = Enum.TextXAlignment.Left
+
+local toggleBtn = Instance.new("TextButton", frame)
+toggleBtn.Text = "Freeze/Unfreeze"
+toggleBtn.Size = UDim2.new(1, -20, 0, 35)
+toggleBtn.Position = UDim2.new(0, 10, 0, 50)
+
+local inputBox = Instance.new("TextBox", frame)
+inputBox.PlaceholderText = "Enter Username"
+inputBox.Size = UDim2.new(0.65, -15, 0, 30)
+inputBox.Position = UDim2.new(0, 10, 0, 95)
+
+local addBtn = Instance.new("TextButton", frame)
+addBtn.Text = "Add"
+addBtn.Size = UDim2.new(0.35, -10, 0, 30)
+addBtn.Position = UDim2.new(0.65, 5, 0, 95)
+
+local removeBtn = Instance.new("TextButton", frame)
+removeBtn.Text = "Remove"
+removeBtn.Size = UDim2.new(1, -20, 0, 30)
+removeBtn.Position = UDim2.new(0, 10, 0, 135)
+
+local label = Instance.new("TextLabel", frame)
+label.Text = "Whitelist:"
+label.Size = UDim2.new(1, -20, 0, 25)
+label.Position = UDim2.new(0, 10, 0, 175)
+label.BackgroundTransparency = 1
+label.TextColor3 = Color3.new(1,1,1)
+label.Font = Enum.Font.SourceSansBold
+label.TextXAlignment = Enum.TextXAlignment.Left
+
+local scroll = Instance.new("ScrollingFrame", frame)
+scroll.Size = UDim2.new(1, -20, 0, 80)
+scroll.Position = UDim2.new(0, 10, 0, 200)
+scroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+scroll.ScrollBarThickness = 4
+
+local themeToggle = Instance.new("TextButton", frame)
+themeToggle.Text = "Toggle Theme"
+themeToggle.Size = UDim2.new(1, -20, 0, 30)
+themeToggle.Position = UDim2.new(0, 10, 0, 290)
+
+local timeStopBtn = Instance.new("TextButton", frame)
+timeStopBtn.Text = "Time Stop"
+timeStopBtn.Size = UDim2.new(1, -20, 0, 30)
+timeStopBtn.Position = UDim2.new(0, 10, 0, 330)
+
+-- Auto Dodge Checkbox
+local autoDodgeCheckbox = Instance.new("TextButton", frame)
+autoDodgeCheckbox.Text = "[Auto Dodge ☐]"
+autoDodgeCheckbox.Size = UDim2.new(1, -20, 0, 30)
+autoDodgeCheckbox.Position = UDim2.new(0, 10, 0, 370)
+autoDodgeCheckbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+autoDodgeCheckbox.TextColor3 = Color3.new(1,1,1)
+autoDodgeCheckbox.Font = Enum.Font.SourceSansBold
+autoDodgeCheckbox.TextSize = 18
+
+local antiStunCheckbox = Instance.new("TextButton", frame)
+antiStunCheckbox.Text = "[Anti Stun ☐]"
+antiStunCheckbox.Size = UDim2.new(1, -20, 0, 30)
+antiStunCheckbox.Position = UDim2.new(0, 10, 0, 410)
+antiStunCheckbox.BackgroundColor3 = Color3.fromRGB(70, 70, 70)
+antiStunCheckbox.TextColor3 = Color3.new(1,1,1)
+antiStunCheckbox.Font = Enum.Font.SourceSansBold
+antiStunCheckbox.TextSize = 18
+antiStunCheckbox.Parent = frame -- add it inside the frame (extra height added below)
+
+frame.Size = UDim2.new(0, 300, 0, 450) -- extend frame for new buttons
+
+-- Internal states
+local autoDodgeEnabled = false
+local antiStunEnabled = false
+local frozen = false
+local timeStopActive = false
+local bubblePart = nil
+local lastLowHPDodge = 0
+
+-- Helper: Check if position is above ground (raycast down)
+local function isOnGround(pos)
+    local ray = Ray.new(pos + Vector3.new(0, 5, 0), Vector3.new(0, -10, 0))
+    local part, posRay = Workspace:FindPartOnRay(ray)
+    return part ~= nil, posRay
+end
+
+-- Teleport character safely near a target position, 10 character steps (assumed 3 studs per step = 30 studs)
+local function safeTeleport(pos)
+    local foundGround, groundPos = isOnGround(pos)
+    if foundGround then
+        -- Teleport to ground position plus small offset upwards
+        local newPos = groundPos + Vector3.new(0, 3, 0)
+        local char = LocalPlayer.Character
+        if char and char:FindFirstChild("HumanoidRootPart") then
+            char.HumanoidRootPart.CFrame = CFrame.new(newPos)
+        end
+    end
+end
+
+-- Auto dodge: teleport 10 character steps away from all players (safe ground)
+local function autoDodge()
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+
+    local dodgePos = hrp.Position
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local otherPos = player.Character.HumanoidRootPart.Position
+            local direction = (dodgePos - otherPos).Unit
+            dodgePos = dodgePos + direction * 30 -- 10 character steps = 30 studs approx
+        end
+    end
+    safeTeleport(dodgePos)
+end
+
+-- Projectile names to detect and dodge
+local projectileNames = {
+    "Tsunami",
+    "Fireball",
+    "Shockwave",
+    "IceSpike",
+    "Meteor",
+    -- add more if needed
+}
+
+-- Projectile dodge: teleport away from any projectile coming close (within 10 studs)
+local function projectileDodge()
+    if not autoDodgeEnabled then return end
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = char.HumanoidRootPart
+
+    for _, proj in pairs(Workspace:GetChildren()) do
+        if table.find(projectileNames, proj.Name) and proj:IsA("BasePart") then
+            local dist = (proj.Position - hrp.Position).Magnitude
+            if dist <= 10 then
+                -- Dodge in opposite direction
+                local dir = (hrp.Position - proj.Position).Unit
+                local dodgePos = hrp.Position + dir * 30
+                safeTeleport(dodgePos)
+                break
+            end
+        end
+    end
+end
+
+-- Low HP auto dodge (5 second cooldown)
+local function checkLowHPDodge()
+    if not autoDodgeEnabled then return end
+    local char = LocalPlayer.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+    local healthPercent = hum.Health / hum.MaxHealth
+    if healthPercent <= 0.05 then
+        local now = tick()
+        if now - lastLowHPDodge >= 5 then
+            autoDodge()
+            lastLowHPDodge = now
+        end
+    end
+end
+
+-- Anti Stun loop: removes stun status
+local function antiStunLoop()
+    while antiStunEnabled do
+        local char = LocalPlayer.Character
+        if char then
+            local stun = char:FindFirstChild("Stun") or char:FindFirstChild("stun") or char:FindFirstChild("Stunned")
+            if stun then
+                stun:Destroy()
+            end
+        end
+        wait(0.1)
+    end
+end
+
+-- Connections for loops
+RunService.Heartbeat:Connect(function()
+    if autoDodgeEnabled then
+        projectileDodge()
+        checkLowHPDodge()
+    end
+end)
+
+-- Buttons and toggles handlers
+toggleBtn.MouseButton1Click:Connect(function()
+    frozen = not frozen
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and not whitelist[player.Name] and player.Character then
+            for _, part in pairs(player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.Anchored = frozen
+                end
+            end
+            local hum = player.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.WalkSpeed = frozen and 0 or 16
+                hum.JumpPower = frozen and 0 or 50
+            end
+            if frozen then
+                freezeEffect(player.Character, true)
+            end
+        end
+    end
+end)
+
+addBtn.MouseButton1Click:Connect(function()
+    local name = inputBox.Text
+    if name ~= "" then
+        whitelist[name] = true
+        saveWhitelist()
+        updateWhitelistDisplay()
+    end
+end)
+
+removeBtn.MouseButton1Click:Connect(function()
+    local name = inputBox.Text
+    if name ~= "" and whitelist[name] then
+        whitelist[name] = nil
+        saveWhitelist()
+        updateWhitelistDisplay()
+    end
+end)
+
+themeToggle.MouseButton1Click:Connect(function()
+    local bgColor = (frame.BackgroundColor3 == Color3.fromRGB(45, 45, 45)) and Color3.fromRGB(220, 220, 220) or Color3.fromRGB(45, 45, 45)
+    frame.BackgroundColor3 = bgColor
+end)
+
+-- Time Stop Logic
+local function activateTimeStop()
+    if timeStopActive then return end
+    timeStopActive = true
+
+    bubblePart = Instance.new("Part", workspace)
+    bubblePart.Anchored = true
+    bubblePart.CanCollide = false
+    bubblePart.Shape = Enum.PartType.Ball
+    bubblePart.Size = Vector3.new(120, 120, 120)
+    bubblePart.CFrame = LocalPlayer.Character and LocalPlayer.Character:GetPrimaryPartCFrame() or CFrame.new(0, 10, 0)
+    bubblePart.Color = Color3.fromRGB(0, 255, 0)
+    bubblePart.Transparency = 0.6
+    bubblePart.Material = Enum.Material.ForceField
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and not whitelist[player.Name] and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local dist = (player.Character.HumanoidRootPart.Position - bubblePart.Position).Magnitude
+            if dist <= 60 then
+                for _, part in pairs(player.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.Anchored = true
+                    end
+                end
+                local hum = player.Character:FindFirstChildOfClass("Humanoid")
+                if hum then
+                    hum.WalkSpeed = 0
+                    hum.JumpPower = 0
+                end
+                freezeEffect(player.Character, true)
+            end
+        end
+    end
+end
+
+local function deactivateTimeStop()
+    if not timeStopActive then return end
+    timeStopActive = false
+    if bubblePart then
+        bubblePart:Destroy()
+        bubblePart = nil
+    end
+    for _, player in pairs(Players:GetPlayers()) do
+        if player.Character then
+            for _, part in pairs(player.Character:GetDescendants()) do
+                if part:IsA("BasePart") then
+                    part.Anchored = false
+                end
+            end
+            local hum = player.Character:FindFirstChildOfClass("Humanoid")
+            if hum then
+                hum.WalkSpeed = 16
+                hum.JumpPower = 50
+            end
+        end
+    end
+end
+
+timeStopBtn.MouseButton1Click:Connect(function()
+    if timeStopActive then
+        deactivateTimeStop()
+    else
+        activateTimeStop()
+    end
+end)
+
+-- Update whitelist GUI display
+function updateWhitelistDisplay()
+    for _, child in pairs(scroll:GetChildren()) do
+        if child:IsA("TextLabel") then
+            child:Destroy()
+        end
+    end
+    local y = 0
+    for name in pairs(whitelist) do
+        local lbl = Instance.new("TextLabel", scroll)
+        lbl.Text = name
+        lbl.Size = UDim2.new(1, 0, 0, 20)
+        lbl.Position = UDim2.new(0, 0, 0, y)
+        lbl.BackgroundTransparency = 1
+        lbl.TextColor3 = Color3.new(1,1,1)
+        lbl.Font = Enum.Font.SourceSans
+        lbl.TextSize = 16
+        y = y + 22
+    end
+    scroll.CanvasSize = UDim2.new(0, 0, 0, y)
+end
+updateWhitelistDisplay()
+
+-- Auto Dodge Checkbox Toggle
+autoDodgeCheckbox.MouseButton1Click:Connect(function()
+    autoDodgeEnabled = not autoDodgeEnabled
+    if autoDodgeEnabled then
+        autoDodgeCheckbox.Text = "[Auto Dodge ☑]"
+    else
+        autoDodgeCheckbox.Text = "[Auto Dodge ☐]"
+    end
+end)
+
+-- Anti Stun Checkbox Toggle
+antiStunCheckbox.MouseButton1Click:Connect(function()
+    antiStunEnabled = not antiStunEnabled
+    if antiStunEnabled then
+        antiStunCheckbox.Text = "[Anti Stun ☑]"
+        coroutine.wrap(antiStunLoop)()
+    else
+        antiStunCheckbox.Text = "[Anti Stun ☐]"
+    end
+end)
